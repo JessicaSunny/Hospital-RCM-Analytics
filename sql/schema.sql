@@ -1,0 +1,69 @@
+-- =============================================================================
+-- schema.sql
+-- STEP 2 OF THE PROJECT: Understand and document the data model.
+-- =============================================================================
+--
+-- CONCEPT (explained simply): before writing any analysis queries, a good
+-- analyst documents the SCHEMA — what tables exist, what each column means,
+-- and how tables relate to each other via keys. This is exactly what the
+-- hospital JD calls "data profiling" and "business definitions / data
+-- dictionaries" — this file IS a basic data dictionary.
+--
+-- These CREATE TABLE statements describe the structure already built by
+-- generate_data.py (which used pandas to_sql). Running this file isn't
+-- required to use the database — it's here so you can explain the design
+-- of each table clearly in an interview, and so you have a reference for
+-- the column names while writing queries.
+-- =============================================================================
+
+-- TABLE: patients (a DIMENSION table — describes WHO, rarely changes)
+-- patient_id      TEXT   PRIMARY KEY  -- unique patient identifier (like an MRN)
+-- first_name      TEXT
+-- last_name       TEXT
+-- date_of_birth   DATE
+-- gender          TEXT   -- 'M' or 'F'
+-- payer           TEXT   -- the patient's insurance company (or 'Self-Pay')
+
+-- TABLE: encounters (a FACT table — describes an EVENT: a hospital visit)
+-- encounter_id        TEXT PRIMARY KEY
+-- patient_id          TEXT  -- FOREIGN KEY -> patients.patient_id
+-- department          TEXT  -- e.g. Cardiology, Orthopedics, Emergency
+-- admit_date          DATE
+-- discharge_date      DATE
+-- length_of_stay_days INTEGER  -- discharge_date - admit_date, precomputed for convenience
+-- cpt_code            TEXT  -- procedure code (WHAT was done)
+-- icd_code            TEXT  -- diagnosis code (WHY the patient was seen)
+-- drg_code            TEXT  -- Diagnosis-Related Group (drives reimbursement)
+
+-- TABLE: claims (a FACT table — one claim is generated per encounter)
+-- claim_id          TEXT PRIMARY KEY
+-- encounter_id      TEXT  -- FOREIGN KEY -> encounters.encounter_id
+-- patient_id        TEXT  -- FOREIGN KEY -> patients.patient_id (denormalized for query convenience)
+-- payer             TEXT  -- copied from patient at time of billing
+-- billed_amount     REAL  -- amount billed to the insurer, in AED
+-- submission_date   DATE  -- when the claim was sent to the payer
+
+-- TABLE: claim_events (a FACT table — the LIFECYCLE/HISTORY of each claim)
+-- This is the most important design choice in this whole project: instead of
+-- storing just ONE status per claim (which loses history), every status
+-- change is its own row. This lets us measure how LONG a claim spent in each
+-- stage, not just where it ended up.
+--
+-- event_id        TEXT PRIMARY KEY
+-- claim_id        TEXT  -- FOREIGN KEY -> claims.claim_id
+-- event_status    TEXT  -- 'Submitted' | 'Paid' | 'Denied' | 'Appealed' | 'Written Off'
+-- event_date      DATE
+-- denial_reason   TEXT  -- populated only on 'Denied'/'Appealed'/'Written Off' events
+
+-- =============================================================================
+-- RELATIONSHIP SUMMARY (how the tables connect):
+--
+--   patients (1) ----< encounters (many)        one patient can have many encounters
+--   encounters (1) ---- claims (1)               one encounter generates exactly one claim
+--   claims (1) ------< claim_events (many)       one claim has many lifecycle events over time
+--
+-- This is a classic STAR-SCHEMA-like structure: patients is a dimension,
+-- and encounters/claims/claim_events form a chain of fact tables connected
+-- by foreign keys. This is the same modeling pattern discussed in the
+-- technical interview prep doc (Section 6: Data Modeling & Architecture).
+-- =============================================================================

@@ -1,0 +1,13 @@
+# Database file - too large and auto-generated
+data/hospital.db
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Build scripts (not needed on GitHub)
+build_qa.js
+build.js
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
