@@ -2,6 +2,7 @@
 
 An end-to-end healthcare analytics project simulating a hospital's **Revenue Cycle Management (RCM)** pipeline — from patient admission through to claims payment and write-off — with SQL-based KPI analysis, Python statistical testing, and data visualisation.
 
+🔗 [Live Dashboard](https://jessicasunny.github.io/Hospital-RCM-Analytics/)
 ---
 
 ## Overview
