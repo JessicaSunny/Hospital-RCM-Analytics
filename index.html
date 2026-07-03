@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hospital RCM Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f5f5f3; color: #0b0b0b; padding: 2rem; }
+  .header { margin-bottom: 2rem; border-bottom: 1px solid #e1e0d9; padding-bottom: 1.25rem; }
+  .header h1 { font-size: 22px; font-weight: 500; color: #0b0b0b; margin-bottom: 4px; }
+  .header p { font-size: 13px; color: #898781; }
+  .header .badge { display: inline-block; background: #e6f1fb; color: #185fa5; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; margin-right: 6px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+  .kpi { background: #ffffff; border: 0.5px solid #e1e0d9; border-radius: 10px; padding: 16px 18px; }
+  .kpi-label { font-size: 12px; color: #898781; margin-bottom: 6px; }
+  .kpi-value { font-size: 28px; font-weight: 500; color: #0b0b0b; margin-bottom: 3px; }
+  .kpi-sub { font-size: 12px; color: #898781; }
+  .charts-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .charts-2-tall { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: #ffffff; border: 0.5px solid #e1e0d9; border-radius: 12px; padding: 1.25rem 1.5rem; }
+  .card-title { font-size: 11px; font-weight: 500; color: #898781; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; font-size: 12px; color: #52514e; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+  .insight { margin-top: 14px; padding: 10px 12px; background: #f5f5f3; border-left: 3px solid #e1e0d9; border-radius: 0 6px 6px 0; font-size: 12px; color: #52514e; line-height: 1.5; }
+  .insight strong { color: #0b0b0b; }
+  .footer { margin-top: 2rem; padding-top: 1rem; border-top: 0.5px solid #e1e0d9; font-size: 11px; color: #898781; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Hospital RCM &amp; Claims Analytics Dashboard</h1>
+  <p style="margin-bottom:10px">Revenue Cycle Management analysis across claims lifecycle, denial patterns, readmission detection, and DRG financial performance</p>
+  <span class="badge">Synthetic dataset</span>
+  <span class="badge">SQL + Python</span>
+  <span class="badge">Jessica Sunny</span>
+  <span class="badge">github.com/JessicaSunny/Hospital-RCM-Analytics</span>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="kpi-label">Total claims</div>
+    <div class="kpi-value">2,295</div>
+    <div class="kpi-sub">1,500 patients · 2,295 encounters</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Claims eventually paid</div>
+    <div class="kpi-value" style="color:#185fa5">88.3%</div>
+    <div class="kpi-sub">2,026 of 2,295 claims</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Overall denial rate</div>
+    <div class="kpi-value" style="color:#e34948">21.5%</div>
+    <div class="kpi-sub">insured claims only (2,056)</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">30-day readmission rate</div>
+    <div class="kpi-value" style="color:#ba7517">13.6%</div>
+    <div class="kpi-sub">311 of 2,295 encounters</div>
+  </div>
+</div>
+
+<div class="charts-2" style="margin-bottom:16px">
+  <div class="card">
+    <div class="card-title">Claim status funnel</div>
+    <div class="legend">
+      <span><span class="leg-dot" style="background:#2a78d6"></span>Paid — 88.3%</span>
+      <span><span class="leg-dot" style="background:#e34948"></span>Written off — 11.7%</span>
+    </div>
+    <div style="position:relative;width:100%;height:180px">
+      <canvas id="c1"></canvas>
+    </div>
+    <div class="insight"><strong>Finding:</strong> 269 claims permanently written off. At an average claim value of ~AED 18,000, this represents ~AED 4.8M in unrecovered revenue.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Denial rate by payer</div>
+    <div style="position:relative;width:100%;height:210px">
+      <canvas id="c2"></canvas>
+    </div>
+    <div class="insight"><strong>Finding:</strong> Thiqa denies 24.1% of claims vs Daman's 18.8% — a 5.3pp gap worth ~29 extra denials to chase per cycle.</div>
+  </div>
+</div>
+
+<div class="charts-2" style="margin-bottom:16px">
+  <div class="card">
+    <div class="card-title">Top denial reasons</div>
+    <div style="position:relative;width:100%;height:210px">
+      <canvas id="c3"></canvas>
+    </div>
+    <div class="insight"><strong>Finding:</strong> 48% of denials are preventable admin errors — incorrect patient info, duplicates, and coding errors. A front-end validation fix, not a payer issue.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Average days in accounts receivable by payer</div>
+    <div style="position:relative;width:100%;height:210px">
+      <canvas id="c4"></canvas>
+    </div>
+    <div class="insight"><strong>Finding:</strong> Self-Pay patients take 31.6 days on average — 9 days slower than Daman. Upfront deposit processes could materially improve cash flow.</div>
+  </div>
+</div>
+
+<div class="charts-2-tall">
+  <div class="card">
+    <div class="card-title">30-day readmission rate by department</div>
+    <div style="position:relative;width:100%;height:280px">
+      <canvas id="c5"></canvas>
+    </div>
+    <div class="insight"><strong>Finding:</strong> Emergency has the highest readmission rate at 16.5% — nearly double Outpatient Surgery at 9.7%. Case-mix adjustment needed before drawing quality conclusions.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">DRG financial performance — avg billed (AED) vs avg length of stay</div>
+    <div class="legend">
+      <span><span class="leg-dot" style="background:#2a78d6"></span>Avg billed (AED, left axis)</span>
+      <span><span class="leg-dot" style="background:#e34948"></span>Avg LOS in days (right axis)</span>
+    </div>
+    <div style="position:relative;width:100%;height:250px">
+      <canvas id="c6"></canvas>
+    </div>
+    <div class="insight"><strong>Finding:</strong> All DRGs billing 4–6% above base reimbursement rate. DRG 194 (Pneumonia) has highest variance at 5.7% — worth investigating clinical efficiency.</div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>Synthetic dataset — no real patient data used. Generated with Python (Faker, numpy). SQL analysis via SQLite. Charts via Chart.js.</span>
+  <span>github.com/JessicaSunny/Hospital-RCM-Analytics</span>
+</div>
+
+<script>
+const grid = 'rgba(0,0,0,0.06)';
+const muted = '#898781';
+const base = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+
+new Chart(document.getElementById('c1'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Paid', 'Written Off'],
+    datasets: [{ data: [2026, 269], backgroundColor: ['#2a78d6','#e34948'], borderWidth: 4, borderColor: '#ffffff' }]
+  },
+  options: { ...base, cutout: '70%',
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed.toLocaleString()} claims` } } }
+  }
+});
+
+new Chart(document.getElementById('c2'), {
+  type: 'bar',
+  data: {
+    labels: ['Thiqa (Govt)', 'NextCare', 'Saudi German', 'AXA Gulf', 'Daman'],
+    datasets: [{ data: [24.1,23.2,21.4,21.4,18.8], backgroundColor: ['#e34948','#eb6834','#eda100','#1baf7a','#2a78d6'], borderRadius: 4, barThickness: 20 }]
+  },
+  options: { ...base, indexAxis: 'y',
+    scales: {
+      x: { min:0, max:30, grid:{color:grid}, ticks:{color:muted, callback:v=>v+'%'} },
+      y: { grid:{display:false}, ticks:{color:muted, font:{size:12}} }
+    }
+  }
+});
+
+new Chart(document.getElementById('c3'), {
+  type: 'bar',
+  data: {
+    labels: ['Medical necessity', 'Incorrect patient info', 'Duplicate claim', 'Not covered', 'Prior auth missing', 'Coding error'],
+    datasets: [{ data: [20.1,18.8,17.0,16.3,16.1,11.8], backgroundColor: '#4a3aa7', borderRadius: 4, barThickness: 20 }]
+  },
+  options: { ...base, indexAxis: 'y',
+    scales: {
+      x: { min:0, max:25, grid:{color:grid}, ticks:{color:muted, callback:v=>v+'%'} },
+      y: { grid:{display:false}, ticks:{color:muted, font:{size:12}} }
+    }
+  }
+});
+
+new Chart(document.getElementById('c4'), {
+  type: 'bar',
+  data: {
+    labels: ['Self-Pay','Thiqa (Govt)','Saudi German','NextCare','AXA Gulf','Daman'],
+    datasets: [{ data: [31.6,24.6,24.2,24.2,23.0,22.7], backgroundColor: '#1baf7a', borderRadius: 4, barThickness: 20 }]
+  },
+  options: { ...base, indexAxis: 'y',
+    scales: {
+      x: { min:0, max:40, grid:{color:grid}, ticks:{color:muted, callback:v=>v+' days'} },
+      y: { grid:{display:false}, ticks:{color:muted, font:{size:12}} }
+    }
+  }
+});
+
+new Chart(document.getElementById('c5'), {
+  type: 'bar',
+  data: {
+    labels: ['Emergency','Pediatrics','Neurology','Oncology','ICU','Cardiology','Obstetrics','Orthopedics','Gen. Medicine','Outpatient Surg.'],
+    datasets: [{ data: [16.5,14.7,14.7,14.5,13.6,13.6,13.3,12.9,12.6,9.7], backgroundColor: '#eda100', borderRadius: 4, barThickness: 18 }]
+  },
+  options: { ...base, indexAxis: 'y',
+    scales: {
+      x: { min:0, max:22, grid:{color:grid}, ticks:{color:muted, callback:v=>v+'%'} },
+      y: { grid:{display:false}, ticks:{color:muted, font:{size:11}} }
+    }
+  }
+});
+
+new Chart(document.getElementById('c6'), {
+  type: 'bar',
+  data: {
+    labels: ['DRG 247\nCoronary stent','DRG 470\nJoint replacement','DRG 291\nHeart failure','DRG 194\nPneumonia','DRG 765\nDelivery','DRG 057\nNervous system'],
+    datasets: [
+      { label: 'Avg billed (AED)', data: [33391,29192,20463,11625,9465,8844], backgroundColor: '#2a78d6', borderRadius: 4, barThickness: 16, yAxisID: 'y' },
+      { label: 'Avg LOS (days)',   data: [3.9,3.6,3.8,3.6,3.5,3.7],           backgroundColor: '#e34948', borderRadius: 4, barThickness: 16, yAxisID: 'y1' }
+    ]
+  },
+  options: { ...base,
+    scales: {
+      x: { grid:{display:false}, ticks:{color:muted, font:{size:10}, maxRotation:0} },
+      y: { grid:{color:grid}, ticks:{color:muted, callback:v=>'AED '+(v/1000).toFixed(0)+'k'} },
+      y1: { position:'right', grid:{display:false}, ticks:{color:muted, callback:v=>v+'d'}, min:0, max:8 }
+    }
+  }
+});
+</script>
+</body>
+</html>
