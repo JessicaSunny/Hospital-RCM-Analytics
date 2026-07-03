@@ -112,15 +112,16 @@
   </div>
 
   <div class="card">
-    <div class="card-title">DRG financial performance — avg billed (AED) vs avg length of stay</div>
+    <div class="card-title">DRG financial performance — avg billed vs base reimbursement rate vs LOS</div>
     <div class="legend">
-      <span><span class="leg-dot" style="background:#2a78d6"></span>Avg billed (AED, left axis)</span>
-      <span><span class="leg-dot" style="background:#e34948"></span>Avg LOS in days (right axis)</span>
+      <span><span class="leg-dot" style="background:#2a78d6"></span>Avg billed (AED)</span>
+      <span><span class="leg-dot" style="background:#1baf7a"></span>Avg LOS (days, right axis)</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:18px;height:0;border-top:2px dashed #e34948;vertical-align:middle"></span>DRG base rate</span>
     </div>
     <div style="position:relative;width:100%;height:250px">
       <canvas id="c6"></canvas>
     </div>
-    <div class="insight"><strong>Finding:</strong> All DRGs billing 4–6% above base reimbursement rate. DRG 194 (Pneumonia) has highest variance at 5.7% — worth investigating clinical efficiency.</div>
+    <div class="insight"><strong>Finding:</strong> All DRGs billing above their fixed base reimbursement rate (dashed line). DRG 194 (Pneumonia) has the highest variance at +5.7% — hover over each bar to see the exact % gap per DRG.</div>
   </div>
 </div>
 
@@ -206,14 +207,62 @@ new Chart(document.getElementById('c6'), {
   data: {
     labels: ['DRG 247\nCoronary stent','DRG 470\nJoint replacement','DRG 291\nHeart failure','DRG 194\nPneumonia','DRG 765\nDelivery','DRG 057\nNervous system'],
     datasets: [
-      { label: 'Avg billed (AED)', data: [33391,29192,20463,11625,9465,8844], backgroundColor: '#2a78d6', borderRadius: 4, barThickness: 16, yAxisID: 'y' },
-      { label: 'Avg LOS (days)',   data: [3.9,3.6,3.8,3.6,3.5,3.7],           backgroundColor: '#e34948', borderRadius: 4, barThickness: 16, yAxisID: 'y1' }
+      {
+        type: 'bar',
+        label: 'Avg billed (AED)',
+        data: [33391, 29192, 20463, 11625, 9465, 8844],
+        backgroundColor: '#2a78d6',
+        borderRadius: 4,
+        barThickness: 20,
+        yAxisID: 'y',
+        order: 2
+      },
+      {
+        type: 'bar',
+        label: 'Avg LOS (days)',
+        data: [3.9, 3.6, 3.8, 3.6, 3.5, 3.7],
+        backgroundColor: '#1baf7a',
+        borderRadius: 4,
+        barThickness: 20,
+        yAxisID: 'y1',
+        order: 3
+      },
+      {
+        type: 'line',
+        label: 'DRG base rate (AED)',
+        data: [32000, 28000, 19500, 11000, 9000, 8500],
+        borderColor: '#e34948',
+        borderWidth: 2,
+        borderDash: [6, 3],
+        pointBackgroundColor: '#e34948',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        fill: false,
+        tension: 0,
+        yAxisID: 'y',
+        order: 1
+      }
     ]
   },
   options: { ...base,
+    plugins: {
+      ...base.plugins,
+      legend: { display: true, labels: { color: muted, boxWidth: 12, font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          afterBody: ctx => {
+            const billed = [33391,29192,20463,11625,9465,8844];
+            const base_r = [32000,28000,19500,11000,9000,8500];
+            const i = ctx[0].dataIndex;
+            const variance = (((billed[i]-base_r[i])/base_r[i])*100).toFixed(1);
+            return [`Variance above base rate: +${variance}%`];
+          }
+        }
+      }
+    },
     scales: {
       x: { grid:{display:false}, ticks:{color:muted, font:{size:10}, maxRotation:0} },
-      y: { grid:{color:grid}, ticks:{color:muted, callback:v=>'AED '+(v/1000).toFixed(0)+'k'} },
+      y: { grid:{color:grid}, ticks:{color:muted, callback:v=>'AED '+(v/1000).toFixed(0)+'k'}, min:0 },
       y1: { position:'right', grid:{display:false}, ticks:{color:muted, callback:v=>v+'d'}, min:0, max:8 }
     }
   }
